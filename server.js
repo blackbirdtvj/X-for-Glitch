@@ -11,6 +11,10 @@ var request = require("request");
 var fs = require("fs");
 var path = require("path");
 const auth = require("basic-auth");
+let argoDomain =""  //leave empty
+
+const argoWorkerKey="argo1"
+const argoWorkerURL="https://cloudflare.workers.dev/argo"
 
 app.get("/", function (req, res) {
   res.send("hello world");
@@ -139,6 +143,22 @@ setInterval(keep_web_alive, 10 * 1000);
 
 //Argo保活
 function keep_argo_alive() {
+  let cmdStr = "cat list";
+  exec(cmdStr, function (err, stdout, stderr) {
+    if (!err) 
+      {
+        let a = stdout.match(/host=.*&/g)[0].slice(5,-1)
+        console.log(a)
+        if(argoDomain !=a) {
+          console.log("update argo")  
+          const cmd = `curl --request POST --url ${argoWorkerURL} --header 'Content-Type: application/json' --data '{"key":"${argoWorkerKey}","value":"${a}"}'`
+          exec(cmd, function (err, stdout, stderr) {
+            if(!err) argoDomain =a;
+            console.log(err)
+          });
+        }
+      }
+  });
   exec("pgrep -laf cloudflared", function (err, stdout, stderr) {
     // 1.查后台系统进程，保持唤醒
     if (stdout.includes("./cloudflared tunnel")) {
